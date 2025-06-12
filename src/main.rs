@@ -2,8 +2,34 @@ use sysinfo::{System, SystemExt, CpuExt, DiskExt};
 use simplelog::*;
 use std::fs::File;
 use log::{info, error};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use reqwest::blocking::Client;
+use std::fs;
+
+#[derive(Deserialize)]
+struct Config {
+    server_url: String,
+    log_level: Option<String>,
+}
+
+fn load_config() -> Config {
+    let content = fs::read_to_string("config.toml")
+        .expect("config.toml dosyası okunamadı.");
+    toml::from_str(&content)
+        .expect("config.toml geçersiz formatta.")
+}
+
+fn parse_log_level(level: Option<String>) -> LevelFilter {
+    match level.unwrap_or_else(|| "info".to_string()).to_lowercase().as_str() {
+        "off" => LevelFilter::Off,
+        "error" => LevelFilter::Error,
+        "warn" => LevelFilter::Warn,
+        "info" => LevelFilter::Info,
+        "debug" => LevelFilter::Debug,
+        "trace" => LevelFilter::Trace,
+        _ => LevelFilter::Info,
+    }
+}
 
 #[derive(Serialize)]
 struct SystemStats {
@@ -21,10 +47,16 @@ struct DiskInfo {
 }
 
 fn main() {
+    let config = load_config();
+    let log_level = parse_log_level(config.log_level.clone());
+
     CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-        WriteLogger::new(LevelFilter::Info, Config::default(), File::create("agent.log").unwrap()),
+        TermLogger::new(log_level, simplelog::Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+        WriteLogger::new(log_level, simplelog::Config::default(), File::create("agent.log").unwrap()),
     ]).unwrap();
+
+    info!("Config'ten gelen server_url: {}", config.server_url);
+    info!("Log seviyesi: {:?}", log_level);
 
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -51,7 +83,7 @@ fn main() {
     info!("Toplanan sistem bilgisi: CPU: {:.2}%, RAM: {}/{} KB", cpu_usage, used_memory, total_memory);
 
     let client = Client::new();
-    let res = client.post("http://localhost:8000/log")
+    let res = client.post(&config.server_url)
         .json(&stats)
         .send();
 

@@ -1,2 +1,4 @@
-12:33:41 [INFO] Toplanan sistem bilgisi: CPU: 40.63%, RAM: 4637474816/6313766912 KB
-12:33:42 [INFO] Sunucuya gönderildi: 200 OK
+12:39:55 [INFO] Config'ten gelen server_url: http://localhost:8000/log
+12:39:55 [INFO] Log seviyesi: Info
+12:39:57 [INFO] Toplanan sistem bilgisi: CPU: 79.27%, RAM: 5229322240/6313766912 KB
+12:39:57 [INFO] Sunucuya gönderildi: 200 OK
