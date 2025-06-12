@@ -1,4 +1,6 @@
-12:39:55 [INFO] Config'ten gelen server_url: http://localhost:8000/log
-12:39:55 [INFO] Log seviyesi: Info
-12:39:57 [INFO] Toplanan sistem bilgisi: CPU: 79.27%, RAM: 5229322240/6313766912 KB
-12:39:57 [INFO] Sunucuya gönderildi: 200 OK
+12:42:06 [INFO] Agent başlatıldı. Gönderim aralığı: 30 saniye
+12:42:06 [INFO] Sunucu URL: http://localhost:8000/log
+12:42:07 [INFO] Bilgi gönderiliyor: CPU 35.37%, RAM 5090791424/6313766912 KB
+12:42:07 [INFO] Gönderim başarılı: 200 OK
+12:42:38 [INFO] Bilgi gönderiliyor: CPU 38.59%, RAM 5264994304/6313766912 KB
+12:42:38 [INFO] Gönderim başarılı: 200 OK

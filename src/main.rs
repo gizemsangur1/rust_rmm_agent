@@ -5,11 +5,14 @@ use log::{info, error};
 use serde::{Serialize, Deserialize};
 use reqwest::blocking::Client;
 use std::fs;
+use std::thread;
+use std::time::Duration;
 
 #[derive(Deserialize)]
 struct Config {
     server_url: String,
     log_level: Option<String>,
+    interval_seconds: Option<u64>,
 }
 
 fn load_config() -> Config {
@@ -49,46 +52,52 @@ struct DiskInfo {
 fn main() {
     let config = load_config();
     let log_level = parse_log_level(config.log_level.clone());
+    let interval = config.interval_seconds.unwrap_or(30);
 
     CombinedLogger::init(vec![
         TermLogger::new(log_level, simplelog::Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
         WriteLogger::new(log_level, simplelog::Config::default(), File::create("agent.log").unwrap()),
     ]).unwrap();
 
-    info!("Config'ten gelen server_url: {}", config.server_url);
-    info!("Log seviyesi: {:?}", log_level);
-
-    let mut sys = System::new_all();
-    sys.refresh_all();
-
-    let cpu_usage = sys.global_cpu_info().cpu_usage();
-    let total_memory = sys.total_memory();
-    let used_memory = sys.used_memory();
-
-    let disks = sys.disks().iter().map(|disk| {
-        DiskInfo {
-            name: disk.name().to_string_lossy().to_string(),
-            total_gb: disk.total_space() / 1_000_000_000,
-            available_gb: disk.available_space() / 1_000_000_000,
-        }
-    }).collect();
-
-    let stats = SystemStats {
-        cpu_usage,
-        total_memory,
-        used_memory,
-        disks,
-    };
-
-    info!("Toplanan sistem bilgisi: CPU: {:.2}%, RAM: {}/{} KB", cpu_usage, used_memory, total_memory);
+    info!("Agent başlatıldı. Gönderim aralığı: {} saniye", interval);
+    info!("Sunucu URL: {}", config.server_url);
 
     let client = Client::new();
-    let res = client.post(&config.server_url)
-        .json(&stats)
-        .send();
 
-    match res {
-        Ok(response) => info!("Sunucuya gönderildi: {}", response.status()),
-        Err(e) => error!("Gönderim hatası: {}", e),
+    loop {
+        let mut sys = System::new_all();
+        sys.refresh_all();
+
+        let cpu_usage = sys.global_cpu_info().cpu_usage();
+        let total_memory = sys.total_memory();
+        let used_memory = sys.used_memory();
+
+        let disks = sys.disks().iter().map(|disk| {
+            DiskInfo {
+                name: disk.name().to_string_lossy().to_string(),
+                total_gb: disk.total_space() / 1_000_000_000,
+                available_gb: disk.available_space() / 1_000_000_000,
+            }
+        }).collect();
+
+        let stats = SystemStats {
+            cpu_usage,
+            total_memory,
+            used_memory,
+            disks,
+        };
+
+        info!("Bilgi gönderiliyor: CPU {:.2}%, RAM {}/{} KB", cpu_usage, used_memory, total_memory);
+
+        let res = client.post(&config.server_url)
+            .json(&stats)
+            .send();
+
+        match res {
+            Ok(response) => info!("Gönderim başarılı: {}", response.status()),
+            Err(e) => error!("Gönderim hatası: {}", e),
+        }
+
+        thread::sleep(Duration::from_secs(interval));
     }
 }
